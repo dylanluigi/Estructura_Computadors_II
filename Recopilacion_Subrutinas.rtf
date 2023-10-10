@@ -1,843 +1,1622 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2757
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
-
-\f0\fs24 \cf0 ; -----------------------------------------------------------------------------\
-NWRTSEGM\
-; Displays a 32 bit number as a hex string in the 7-segment display.\
-; Input    - D0.L: Number to display\
-;            A0  : Display set mapping address\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D2,-(A7)\
-            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY\
-            MOVE.W  #7,D2                   ; PREPARE DBRA\
-            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0\
-.LOOP       AND.W   #$0F0F,D0               ; MASK FOR VALUE AND DISPLAY NUMBER\
-            JSR     WRTSEGM                 ; DISPLAY THE DATA\
-            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER\
-            LSR.L   #4,D1                   ; PREPARE THE NEXT NIBBLE\
-            MOVE.B  D1,D0                   ; TRANSFER IT TO D0\
-            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES\
-            MOVEM.L (A7)+,D0-D2\
+-----------------------------------------------------------------------------
+\
+NWRTSEGM
+\
+; Displays a 32 bit number as a hex string in the 7-segment display.
+\
+; Input    - D0.L: Number to display
+\
+;            A0  : Display set mapping address
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D2,-(A7)
+\
+            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY
+\
+            MOVE.W  #7,D2                   ; PREPARE DBRA
+\
+            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0
+\
+.LOOP       AND.W   #$0F0F,D0               ; MASK FOR VALUE AND DISPLAY NUMBER
+\
+            JSR     WRTSEGM                 ; DISPLAY THE DATA
+\
+            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER
+\
+            LSR.L   #4,D1                   ; PREPARE THE NEXT NIBBLE
+\
+            MOVE.B  D1,D0                   ; TRANSFER IT TO D0
+\
+            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES
+\
+            MOVEM.L (A7)+,D0-D2
+\
             RTS\
 \
 \
-; -----------------------------------------------------------------------------\
-MWRTSEGM\
-; Displays a 32 bit number as a hex string in the 7-segment display.\
-; Input    - A0  : Display set mapping address\
-;            A1  : Pointer to the 32-bit number to display\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D2,-(A7)\
-            MOVE.L  (A1),D0                 ; COPY THE NUMBER INTO D1\
-            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY\
-            MOVE.W  #7,D2                   ; PREPARE DBRA\
-            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0\
-.LOOP       AND.W   #$0F0F,D0               ; MASK FOR VALUE AND DISPLAY NUMBER\
-            JSR     WRTSEGM                 ; DISPLAY THE DATA\
-            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER\
-            LSR.L   #4,D1                   ; PREPARE THE NEXT NIBBLE\
-            MOVE.B  D1,D0                   ; TRANSFER IT TO D0\
-            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES\
-            MOVEM.L (A7)+,D0-D2\
-            RTS\
-\
+; -----------------------------------------------------------------------------
 \
-; -----------------------------------------------------------------------------\
-SHOWHWIN\
-; Shows the hardware window\
-; Input    - None\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D1,-(A7)\
-            MOVE.B  #32, D0\
-            CLR.B   D1\
-            TRAP    #15\
-            MOVEM.L (A7)+,D0-D1\
-            RTS\
-\
-; -----------------------------------------------------------------------------\
-WRTSEGM\
-; Displays a number between $0 and $F in the specified 7-segment display\
-; Input    - D0.W: MSB: Display number, LSB value ($0-$F) to show. A display\
-;                  number of 0 means the rightmost display whilst a value of\
-;                  7 means the leftmost.\
-;            A0  : Display set mapping address\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D1/A1,-(A7)\
-            MOVE.W  D0,D1\
-            AND.L   #$FF,D0\
-            NOT.W   D1\
-            LSR.W   #7,D1\
-            AND.L   #$0E,D1\
-            LEA     .DATA,A1\
-            MOVE.B  (A1,D0),(A0,D1)\
-            MOVEM.L (A7)+,D0-D1/A1\
-            RTS\
-.DATA       DC.B    $3F,$06,$5B,$4F,$66,$6D,$7D,$07,$7F,$6F,$77,$7C,$39,$5E,$79\
-            DC.B    $71\
-\
-; -----------------------------------------------------------------------------\
-GTHWADDR\
-; Puts the addresses where the 7-segment display, the LED array, the switches\
-; and the toggle buttons are mapped in the RAM addresses beginning at A0 in\
-; the specified order.\
-; Input    - A0: Address to begin storing mapped hardware addresses.\
-; Output   - Addresses stored in RAM.\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L A0-A1/D0-D2,-(A7)\
-            LEA     .DATA,A1\
-            MOVE.W  #3,D2\
-            MOVE.B  #32,D0\
-.LOOP       MOVE.B  (A1)+,D1\
-            TRAP    #15\
-            MOVE.L  D1,(A0)+\
-            DBRA.W  D2,.LOOP\
-            MOVEM.L (A7)+,A0-A1/D0-D2\
-            RTS\
-\
-            ; TRAP #15 FUNCTION 32 PARAMETERS\
-.DATA       DC.B    1,2,3,7\
-            DS.W    0\
-\
+MWRTSEGM
+\
+; Displays a 32 bit number as a hex string in the 7-segment display.
+\
+; Input    - A0  : Display set mapping address
+\
+;            A1  : Pointer to the 32-bit number to display
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D2,-(A7)
+\
+            MOVE.L  (A1),D0                 ; COPY THE NUMBER INTO D1
+\
+            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY
+\
+            MOVE.W  #7,D2                   ; PREPARE DBRA
+\
+            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0
+\
+.LOOP       AND.W   #$0F0F,D0               ; MASK FOR VALUE AND DISPLAY NUMBER
+\
+            JSR     WRTSEGM                 ; DISPLAY THE DATA
+\
+            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER
+\
+            LSR.L   #4,D1                   ; PREPARE THE NEXT NIBBLE
+\
+            MOVE.B  D1,D0                   ; TRANSFER IT TO D0
+\
+            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES
+\
+            MOVEM.L (A7)+,D0-D2
+\
+            RTS
+\
+
+\
+\
+; -----------------------------------------------------------------------------
+\
+SHOWHWIN
+\
+; Shows the hardware window
+\
+; Input    - None
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D1,-(A7)
+\
+            MOVE.B  #32, D0
+\
+            CLR.B   D1
+\
+            TRAP    #15
+\
+            MOVEM.L (A7)+,D0-D1
+\
+            RTS
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+WRTSEGM
+\
+; Displays a number between $0 and $F in the specified 7-segment display
+\
+; Input    - D0.W: MSB: Display number, LSB value ($0-$F) to show. A display
+\
+;                  number of 0 means the rightmost display whilst a value of
+\
+;                  7 means the leftmost.
+\
+;            A0  : Display set mapping address
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D1/A1,-(A7)
+\
+            MOVE.W  D0,D1
+\
+            AND.L   #$FF,D0
+\
+            NOT.W   D1
+\
+            LSR.W   #7,D1
+\
+            AND.L   #$0E,D1
+\
+            LEA     .DATA,A1
+\
+            MOVE.B  (A1,D0),(A0,D1)
+\
+            MOVEM.L (A7)+,D0-D1/A1
+\
+            RTS
+\
+.DATA       DC.B    $3F,$06,$5B,$4F,$66,$6D,$7D,$07,$7F,$6F,$77,$7C,$39,$5E,$79
+\
+            DC.B    $71
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+GTHWADDR
+\
+; Puts the addresses where the 7-segment display, the LED array, the switches
+\
+; and the toggle buttons are mapped in the RAM addresses beginning at A0 in
+\
+; the specified order.
+\
+; Input    - A0: Address to begin storing mapped hardware addresses.
+\
+; Output   - Addresses stored in RAM.
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L A0-A1/D0-D2,-(A7)
+\
+            LEA     .DATA,A1
+\
+            MOVE.W  #3,D2
+\
+            MOVE.B  #32,D0
+\
+.LOOP       MOVE.B  (A1)+,D1
+\
+            TRAP    #15
+\
+            MOVE.L  D1,(A0)+
+\
+            DBRA.W  D2,.LOOP
+\
+            MOVEM.L (A7)+,A0-A1/D0-D2
+\
+            RTS
+\
+
+\
+            ; TRAP #15 FUNCTION 32 PARAMETERS
+\
+.DATA       DC.B    1,2,3,7
+\
+            DS.W    0
+\
+
+\
             END     START\
 \
-; -----------------------------------------------------------------------------\
-LEDBAR\
-; TRAP #0 service routine. Shows a bar of leds of length D0.B with origin in\
-; the right side.\
-; Input    - D0.B - How many leds to light from right to left\
-;            A0   - LED mapping address\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.W D0-D1,-(A7)             ; SAVE REGISTERS\
-            CLR.B   D1                      ; INITIALIZE THE VALUE TO WRITE\
-            AND.W   #$FF,D0                 ; MASK D0 TO PERFORM DBRA\
-            BEQ     .DOWRITE                ; IF D0==0, READY TO WRITE\
-            SUBQ.W  #1,D0                   ; PREPARE FOR DBRA COUNT\
-.LOOP       LSL.W   #1,D1                   ; ROTATE LEFT AND PUT A ZERO TO LSB\
-            OR.W    #1,D1                   ; PUT THE LSB TO 1\
-            DBRA.W  D0,.LOOP                ; LOOP D0 TIMES\
-.DOWRITE    MOVE.B  D1,(A0)                 ; WRITE THE VALUE TO THE LEDS.\
-            MOVEM.W (A7)+,D0-D1             ; RESTORE REGISTERS\
-            RTE\
-\
-; -----------------------------------------------------------------------------\
-LEDBAR2\
-; Same as LEDBAR but with a more intuitive method.\
-; Input    - D0.B - How many leds to light from right to left\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L A0-A1/D0,-(A7)          ; SAVE REGISTERS\
-            AND.W   #$FF,D0                 ; MASK D0 TO BE USED AS INDEX\
-            LEA     .DATA,A1                ; GET THE POINTER TO THE DATA\
-            MOVE.B  (A1,D0.W),(A0)          ; ACCESS THE DATA TO DISPLAY\
-            MOVEM.L (A7)+,A0-A1/D0          ; RESTORE REGISTERS\
-            RTE\
-.DATA       DC.B    %00000000,%00000001,%00000011,%00000111\
-            DC.B    %00001111,%00011111,%00111111,%01111111\
-            DC.B    %11111111\
-            DS.W    0\
+; -----------------------------------------------------------------------------
+\
+LEDBAR
+\
+; TRAP #0 service routine. Shows a bar of leds of length D0.B with origin in
+\
+; the right side.
+\
+; Input    - D0.B - How many leds to light from right to left
+\
+;            A0   - LED mapping address
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.W D0-D1,-(A7)             ; SAVE REGISTERS
+\
+            CLR.B   D1                      ; INITIALIZE THE VALUE TO WRITE
+\
+            AND.W   #$FF,D0                 ; MASK D0 TO PERFORM DBRA
+\
+            BEQ     .DOWRITE                ; IF D0==0, READY TO WRITE
+\
+            SUBQ.W  #1,D0                   ; PREPARE FOR DBRA COUNT
+\
+.LOOP       LSL.W   #1,D1                   ; ROTATE LEFT AND PUT A ZERO TO LSB
+\
+            OR.W    #1,D1                   ; PUT THE LSB TO 1
+\
+            DBRA.W  D0,.LOOP                ; LOOP D0 TIMES
+\
+.DOWRITE    MOVE.B  D1,(A0)                 ; WRITE THE VALUE TO THE LEDS.
+\
+            MOVEM.W (A7)+,D0-D1             ; RESTORE REGISTERS
+\
+            RTE
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+LEDBAR2
+\
+; Same as LEDBAR but with a more intuitive method.
+\
+; Input    - D0.B - How many leds to light from right to left
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L A0-A1/D0,-(A7)          ; SAVE REGISTERS
+\
+            AND.W   #$FF,D0                 ; MASK D0 TO BE USED AS INDEX
+\
+            LEA     .DATA,A1                ; GET THE POINTER TO THE DATA
+\
+            MOVE.B  (A1,D0.W),(A0)          ; ACCESS THE DATA TO DISPLAY
+\
+            MOVEM.L (A7)+,A0-A1/D0          ; RESTORE REGISTERS
+\
+            RTE
+\
+.DATA       DC.B    %00000000,%00000001,%00000011,%00000111
+\
+            DC.B    %00001111,%00011111,%00111111,%01111111
+\
+            DC.B    %11111111
+\
+            DS.W    0
 \
 \
-; -----------------------------------------------------------------------------\
-CNTSWTCH\
-; Counts the number of active switches\
-; Input    - A0  : Switch set mapping address\
-; Output   - D0.B: Number of pressed switches\
-; Modifies - Nothing aside of the output\
-; -----------------------------------------------------------------------------\
-            MOVEM.L A0/D1-D3,-(A7)\
-            MOVE.B  (A0),D1\
-            MOVE.W  #7,D2\
-            CLR.B   D0\
-            CLR.B   D3\
-.LOOP       LSR.B   #1,D1\
-            ADDX.B  D3,D0\
-.NOINC      DBRA.W  D2,.LOOP\
-            MOVEM.L (A7)+,A0/D1-D3\
-            RTS\
-\
-            END     START\
-\
-; -----------------------------------------------------------------------------\
-B8WRTSEG\
-; Displays a 32 bit number as a octal string in the 7-segment display. If the\
-; number does not fit into the display, it shows the part that fits and turns\
-; all the LED on.\
-; Input    - D0.L: Number to display\
-;            A0  : Display set mapping address\
-;            A1  : LED mapping address\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D2,-(A7)\
-            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY\
-            CLR.B   D2                      ; PREPARE LIGHTS OFF\
-            AND.L   #$FF000000,D0           ; CHECK IF NUMBER FITS\
-            BEQ     .FITS                   ; IF IT FITS, CONTINUE\
-            MOVE.B  #$FF,D2                 ; IF NOT, PREPARE LEDS ON\
-.FITS       MOVE.B  D2,(A1)                 ; TURNS LEDS ON/OFF\
-            MOVE.L  D1,D0                   ; RESTORE D0\
-            MOVE.W  #7,D2                   ; PREPARE DBRA\
-            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0\
-.LOOP       AND.W   #$0F07,D0               ; MASK FOR VALUE AND DISPLAY NUMBER\
-            JSR     WRTSEGM                 ; DISPLAY THE DATA\
-            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER\
-            LSR.L   #3,D1                   ; PREPARE THE NEXT NIBBLE\
-            MOVE.B  D1,D0                   ; TRANSFER IT TO D0\
-            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES\
-            MOVEM.L (A7)+,D0-D2\
-            RTE\
+\
+; -----------------------------------------------------------------------------
+\
+CNTSWTCH
+\
+; Counts the number of active switches
+\
+; Input    - A0  : Switch set mapping address
+\
+; Output   - D0.B: Number of pressed switches
+\
+; Modifies - Nothing aside of the output
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L A0/D1-D3,-(A7)
+\
+            MOVE.B  (A0),D1
+\
+            MOVE.W  #7,D2
+\
+            CLR.B   D0
+\
+            CLR.B   D3
+\
+.LOOP       LSR.B   #1,D1
+\
+            ADDX.B  D3,D0
+\
+.NOINC      DBRA.W  D2,.LOOP
+\
+            MOVEM.L (A7)+,A0/D1-D3
+\
+            RTS
+\
+
+\
+            END     START
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+B8WRTSEG
+\
+; Displays a 32 bit number as a octal string in the 7-segment display. If the
+\
+; number does not fit into the display, it shows the part that fits and turns
+\
+; all the LED on.
+\
+; Input    - D0.L: Number to display
+\
+;            A0  : Display set mapping address
+\
+;            A1  : LED mapping address
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D2,-(A7)
+\
+            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY
+\
+            CLR.B   D2                      ; PREPARE LIGHTS OFF
+\
+            AND.L   #$FF000000,D0           ; CHECK IF NUMBER FITS
+\
+            BEQ     .FITS                   ; IF IT FITS, CONTINUE
+\
+            MOVE.B  #$FF,D2                 ; IF NOT, PREPARE LEDS ON
+\
+.FITS       MOVE.B  D2,(A1)                 ; TURNS LEDS ON/OFF
+\
+            MOVE.L  D1,D0                   ; RESTORE D0
+\
+            MOVE.W  #7,D2                   ; PREPARE DBRA
+\
+            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0
+\
+.LOOP       AND.W   #$0F07,D0               ; MASK FOR VALUE AND DISPLAY NUMBER
+\
+            JSR     WRTSEGM                 ; DISPLAY THE DATA
+\
+            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER
+\
+            LSR.L   #3,D1                   ; PREPARE THE NEXT NIBBLE
+\
+            MOVE.B  D1,D0                   ; TRANSFER IT TO D0
+\
+            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES
+\
+            MOVEM.L (A7)+,D0-D2
+\
+            RTE
+\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
 \cf0 -----------------------------------------------------------------------------\
 Print hello world \
-; ==============================================================================\
-; LAB ASSIGNMENT 1 MODEL A SOLUTION\
-; AUTHOR      : ANTONI BURGUERA\
-; ==============================================================================\
-\
-            ORG     $1000\
-START\
-            ; SHOW THE HARDWARE WINDOW\
-            MOVE.B  #32,D0\
-            CLR.B   D1\
-            TRAP    #15\
-\
-            ; PUT THE 7-SEGMENT DISPLAYS MAPPING ADDRESS INTO A0\
-            ADDQ.B  #1,D1\
-            TRAP    #15\
-            MOVE.L  D1,A0\
-\
-            ; WRITE HOLA EC2\
-            LEA     .HMON,A1\
-            MOVE.W  #7,D0\
-.LOOP       MOVE.B  (A1)+,(A0)\
-            ADD.L   #2,A0\
-            DBRA.W  D0,.LOOP\
-            SIMHALT\
-.HMON       DC.B    $76,$3F,$38,$77,$00,$79,$39,$5B\
-\
+; ==============================================================================
+\
+; LAB ASSIGNMENT 1 MODEL A SOLUTION
+\
+; AUTHOR      : ANTONI BURGUERA
+\
+; ==============================================================================
+\
+
+\
+            ORG     $1000
+\
+START
+\
+            ; SHOW THE HARDWARE WINDOW
+\
+            MOVE.B  #32,D0
+\
+            CLR.B   D1
+\
+            TRAP    #15
+\
+
+\
+            ; PUT THE 7-SEGMENT DISPLAYS MAPPING ADDRESS INTO A0
+\
+            ADDQ.B  #1,D1
+\
+            TRAP    #15
+\
+            MOVE.L  D1,A0
+\
+
+\
+            ; WRITE HOLA EC2
+\
+            LEA     .HMON,A1
+\
+            MOVE.W  #7,D0
+\
+.LOOP       MOVE.B  (A1)+,(A0)
+\
+            ADD.L   #2,A0
+\
+            DBRA.W  D0,.LOOP
+\
+            SIMHALT
+\
+.HMON       DC.B    $76,$3F,$38,$77,$00,$79,$39,$5B
+\
+
+\
             END     START\
 \
 \
 \
-; -----------------------------------------------------------------------------\
-CSCTSWTC\
-; TRAP #0 service routine. Detects if two or more consecutive switches are\
-; pressed.\
-; Input    - A0   - LED mapping address\
-; Output   - D0.B - $FF if two or more consecutive switches are pressed\
-;                 - 0 otherwise\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L A0/D1,-(A7)             ; STORE REGISTERS\
-            MOVE.B  (A0),D0                 ; GET SWITCHES STATE\
-            MOVE.B  D0,D1                   ; COPY THE STATE TO ROTATE IT\
-            ROR.B   #1,D1                   ; ROTATE THE STATE\
-            AND.B   D0,D1                   ; AND DO THE AND\
-            SNE.B   D0                      ; IF AND IS NOT ZERO, PUT #FF\
-            MOVEM.L (A7)+,A0/D1             ; RESTORE REGISTERS\
-            RTE\
+; -----------------------------------------------------------------------------
 \
-; -----------------------------------------------------------------------------\
-B4WRTSEG\
-; Displays a 32 bit number as a base-4 string in the 7-segment display. If the\
-; number does not fit into the display, it shows the part that fits and turns\
-; all the LED on.\
-; Input    - D0.L: Number to display\
-;            A0  : Display set mapping address\
-;            A1  : LED mapping address\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D2,-(A7)\
-            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY\
-            CLR.B   D2                      ; PREPARE LIGHTS OFF\
-            AND.L   #$FFFF0000,D0           ; CHECK IF NUMBER FITS\
-            BEQ     .FITS                   ; IF IT FITS, CONTINUE\
-            MOVE.B  #$FF,D2                 ; IF NOT, PREPARE LEDS ON\
-.FITS       MOVE.B  D2,(A1)                 ; TURNS LEDS ON/OFF\
-            MOVE.L  D1,D0                   ; RESTORE D0\
-            MOVE.W  #7,D2                   ; PREPARE DBRA\
-            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0\
-.LOOP       AND.W   #$0F03,D0               ; MASK FOR VALUE AND DISPLAY NUMBER\
-            JSR     WRTSEGM                 ; DISPLAY THE DATA\
-            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER\
-            LSR.L   #2,D1                   ; PREPARE THE NEXT NIBBLE\
-            MOVE.B  D1,D0                   ; TRANSFER IT TO D0\
-            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES\
-            MOVEM.L (A7)+,D0-D2\
-            RTE\
+CSCTSWTC
+\
+; TRAP #0 service routine. Detects if two or more consecutive switches are
+\
+; pressed.
+\
+; Input    - A0   - LED mapping address
+\
+; Output   - D0.B - $FF if two or more consecutive switches are pressed
+\
+;                 - 0 otherwise
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L A0/D1,-(A7)             ; STORE REGISTERS
+\
+            MOVE.B  (A0),D0                 ; GET SWITCHES STATE
+\
+            MOVE.B  D0,D1                   ; COPY THE STATE TO ROTATE IT
+\
+            ROR.B   #1,D1                   ; ROTATE THE STATE
+\
+            AND.B   D0,D1                   ; AND DO THE AND
+\
+            SNE.B   D0                      ; IF AND IS NOT ZERO, PUT #FF
+\
+            MOVEM.L (A7)+,A0/D1             ; RESTORE REGISTERS
+\
+            RTE
 \
 \
-; ==============================================================================\
-; LAB ASSIGNMENT 1 MODEL B SOLUTION\
-; AUTHOR      : ANTONI BURGUERA\
-; ==============================================================================\
-\
-            ORG     $1000\
-START\
-            ; SHOW HARDWARE WINDOW\
-            MOVE.B  #32,D0\
-            CLR.B   D1\
-            TRAP    #15\
-\
-            ; PUT LED MAPPING ADDRESS INTO A0\
-            ADDQ.B  #2,D1\
-            TRAP    #15\
-            MOVE.L  D1,A0\
-\
-            ; CLEAR COUNTER\
-            CLR.B   D2\
-\
-            ; DISPLAY COUNTER\
-.LOOP       MOVE.B  D2,(A0)\
-\
-            ; WAIT HALF SECOND\
-            MOVE.B  #23,D0\
-            MOVE.L  #50,D1\
-            TRAP    #15\
-\
-            ; INCREASE COUNTER AND LOOP\
-            ADDQ.B  #1,D2\
-            BRA     .LOOP\
-\
-            SIMHALT\
-\
+; -----------------------------------------------------------------------------
+\
+B4WRTSEG
+\
+; Displays a 32 bit number as a base-4 string in the 7-segment display. If the
+\
+; number does not fit into the display, it shows the part that fits and turns
+\
+; all the LED on.
+\
+; Input    - D0.L: Number to display
+\
+;            A0  : Display set mapping address
+\
+;            A1  : LED mapping address
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D2,-(A7)
+\
+            MOVE.L  D0,D1                   ; COPY VALUE TO DISPLAY
+\
+            CLR.B   D2                      ; PREPARE LIGHTS OFF
+\
+            AND.L   #$FFFF0000,D0           ; CHECK IF NUMBER FITS
+\
+            BEQ     .FITS                   ; IF IT FITS, CONTINUE
+\
+            MOVE.B  #$FF,D2                 ; IF NOT, PREPARE LEDS ON
+\
+.FITS       MOVE.B  D2,(A1)                 ; TURNS LEDS ON/OFF
+\
+            MOVE.L  D1,D0                   ; RESTORE D0
+\
+            MOVE.W  #7,D2                   ; PREPARE DBRA
+\
+            AND.W   #$000F,D0               ; BEGIN WITH DISPLAY NUMBER 0
+\
+.LOOP       AND.W   #$0F03,D0               ; MASK FOR VALUE AND DISPLAY NUMBER
+\
+            JSR     WRTSEGM                 ; DISPLAY THE DATA
+\
+            ADD.W   #$0100,D0               ; ADD ONE TO THE DISPLAY NUMBER
+\
+            LSR.L   #2,D1                   ; PREPARE THE NEXT NIBBLE
+\
+            MOVE.B  D1,D0                   ; TRANSFER IT TO D0
+\
+            DBRA.W  D2,.LOOP                ; LOOP FOR ALL NIBBLES
+\
+            MOVEM.L (A7)+,D0-D2
+\
+            RTE
+\
+\
+\
+; ==============================================================================
+\
+; LAB ASSIGNMENT 1 MODEL B SOLUTION
+\
+; AUTHOR      : ANTONI BURGUERA
+\
+; ==============================================================================
+\
+
+\
+            ORG     $1000
+\
+START
+\
+            ; SHOW HARDWARE WINDOW
+\
+            MOVE.B  #32,D0
+\
+            CLR.B   D1
+\
+            TRAP    #15
+\
+
+\
+            ; PUT LED MAPPING ADDRESS INTO A0
+\
+            ADDQ.B  #2,D1
+\
+            TRAP    #15
+\
+            MOVE.L  D1,A0
+\
+
+\
+            ; CLEAR COUNTER
+\
+            CLR.B   D2
+\
+
+\
+            ; DISPLAY COUNTER
+\
+.LOOP       MOVE.B  D2,(A0)
+\
+
+\
+            ; WAIT HALF SECOND
+\
+            MOVE.B  #23,D0
+\
+            MOVE.L  #50,D1
+\
+            TRAP    #15
+\
+
+\
+            ; INCREASE COUNTER AND LOOP
+\
+            ADDQ.B  #1,D2
+\
+            BRA     .LOOP
+\
+
+\
+            SIMHALT
+\
+
+\
             END     START\
 \
 \
-; -----------------------------------------------------------------------------\
-DISPATCH\
-; Displays a square of the specified color\
-; Input    - D1.W: X Center\
-;            D2.W: Y Center\
-;            D3.W: Side size\
-;            D4.L: Color\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D6,-(A7)\
-            MOVE.W  D1,D6                   ; STORE D1\
-            MOVE.B  #81,D0                  ; SET FILL TO COLOR IN D4\
-            MOVE.L  D4,D1\
-            TRAP    #15\
-            MOVE.B  #80,D0                  ; SET PEN TO WHITE\
-            MOVE.L  #$00FFFFFF,D1\
-            TRAP    #15\
-            MOVE.W  D6,D1                   ; RESTORE D1\
-            MOVE.W  D3,D5                   ; COPY RADIUS\
-            LSR.W   #1,D5                   ; DIVIDE BY TWO\
-            MOVE.W  D1,D3                   ; PREPARE COORDINATES\
-            MOVE.W  D2,D4\
-            SUB.W   D5,D1\
-            SUB.W   D5,D2\
-            ADD.W   D5,D3\
-            ADD.W   D5,D4\
-            MOVE.B  #87,D0                  ; DRAW RECTANGLE/SQUARE\
-            TRAP    #15\
-            MOVEM.L (A7)+,D0-D6\
-            RTE\
+; -----------------------------------------------------------------------------
+\
+DISPATCH
+\
+; Displays a square of the specified color
+\
+; Input    - D1.W: X Center
+\
+;            D2.W: Y Center
+\
+;            D3.W: Side size
+\
+;            D4.L: Color
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D6,-(A7)
+\
+            MOVE.W  D1,D6                   ; STORE D1
+\
+            MOVE.B  #81,D0                  ; SET FILL TO COLOR IN D4
+\
+            MOVE.L  D4,D1
+\
+            TRAP    #15
+\
+            MOVE.B  #80,D0                  ; SET PEN TO WHITE
+\
+            MOVE.L  #$00FFFFFF,D1
+\
+            TRAP    #15
+\
+            MOVE.W  D6,D1                   ; RESTORE D1
+\
+            MOVE.W  D3,D5                   ; COPY RADIUS
+\
+            LSR.W   #1,D5                   ; DIVIDE BY TWO
+\
+            MOVE.W  D1,D3                   ; PREPARE COORDINATES
+\
+            MOVE.W  D2,D4
+\
+            SUB.W   D5,D1
+\
+            SUB.W   D5,D2
+\
+            ADD.W   D5,D3
+\
+            ADD.W   D5,D4
+\
+            MOVE.B  #87,D0                  ; DRAW RECTANGLE/SQUARE
+\
+            TRAP    #15
+\
+            MOVEM.L (A7)+,D0-D6
+\
+            RTE
+\
 \
 \
 > Ejericio Cuadrado \
 \
 \
-; -----------------------------------------------------------------------------\
-; CONSTANTS\
-; -----------------------------------------------------------------------------\
-SCRWIDTH    EQU     640                     ; DESIRED SCREEN WIDTH\
-SCRHEIGH    EQU     480                     ; DESIRED SCREEN HEIGHT\
-SQRSIDE     EQU     64                      ; SIDE OF THE SQUARE TO DRAW\
-SQRBCHAN    EQU     128                     ; SQUARE BLUE CHANNEL VALUE\
-\
-            ORG     $1000\
-; -----------------------------------------------------------------------------\
-START\
-; Initializes the screen and draws a square centered at the graphic window\
-; whose side is 64 and whose fill color has R=G=0 and B=128.\
-; -----------------------------------------------------------------------------\
-            JSR     INIT                    ; INITIALIZE SCREEN\
-            MOVE.W  #SCRWIDTH/2,D1          ; X SCREEN CENTER\
-            MOVE.W  #SCRHEIGH/2,D2          ; Y SCREEN CENTER\
-            MOVE.W  #SQRSIDE,D3             ; SQUARE SIDE\
-            MOVE.B  #SQRBCHAN,D0            ; SQUARE BLUE CHANNEL\
-            JSR     DRSQUARE\
-            SIMHALT\
-\
-; -----------------------------------------------------------------------------\
-INIT\
-; Initializes the output window to 640x480 windowed mode. The routine INIT\
-; in the exercises could have also been used.\
-; -----------------------------------------------------------------------------\
-            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1\
-            MOVE.B  #33,D0\
-            TRAP    #15                     ; SET RESOLUTION\
-            MOVE.L  #1,D1\
-            TRAP    #15                     ; SET WINDOWED MODE\
-            RTS\
+; -----------------------------------------------------------------------------
 \
-; -----------------------------------------------------------------------------\
-DRSQUARE\
-; Draws a square with side D3.W and centered at D1.W, D2.W. The fill color is\
-; R=0, G=0 and B=D0.B and the border color is white.\
-; Input    - D0.B - Fill color blue channel value.\
-;            D1.W - Square center X coordinate.\
-;            D2.W - Square center Y coordinate.\
-;            D3.W - Square side.\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D1-D6,-(A7)             ; STORE REGISTERS\
-            MOVE.W  D1,D6                   ; STORE D1\
-            MOVE.B  D0,D1\
-            SWAP.W  D1                      ; PUT THE BLUE CHANNEL\
-            AND.L   #$00FF0000,D1           ; MASK IT\
-            MOVE.B  #81,D0\
-            TRAP    #15                     ; DEFINE FILL COLOR\
-            MOVE.L  #$00FFFFFF,D1           ; WHITE COLOR\
-            MOVE.B  #80,D0\
-            TRAP    #15                     ; DEFINE CONTOUR COLOR\
-            MOVE.W  D6,D1                   ; RESTORE D1\
-            MOVE.W  D3,D5                   ; COPY THE VALUE TO D5\
-            LSR.W   #1,D5                   ; COMPUTE HALF THE SIDE\
-            MOVE.W  D1,D3                   ; PREPARE XRIGHT\
-            MOVE.W  D2,D4                   ; PREPARE YRIGHT\
-            ADD.W   D5,D3                   ; COMPUTE XRIGHT\
-            ADD.W   D5,D4                   ; COMPUTE YRIGHT\
-            NEG.W   D5                      ; CONVERT TO NEGATIVE\
-            ADD.W   D5,D1                   ; COMPUTE XLEFT\
-            ADD.W   D5,D2                   ; COMPUTE YLEFT\
-            MOVE.B  #87,D0                  ; DRAW RECTANGLE TASK NUMBER\
-            TRAP    #15                     ; DRAW IT\
-            MOVEM.L (A7)+,D1-D6             ; RESTORE REGISTERS\
-            RTS\
-\
-            END     START\
+; CONSTANTS
+\
+; -----------------------------------------------------------------------------
+\
+SCRWIDTH    EQU     640                     ; DESIRED SCREEN WIDTH
+\
+SCRHEIGH    EQU     480                     ; DESIRED SCREEN HEIGHT
+\
+SQRSIDE     EQU     64                      ; SIDE OF THE SQUARE TO DRAW
+\
+SQRBCHAN    EQU     128                     ; SQUARE BLUE CHANNEL VALUE
+\
+
+\
+            ORG     $1000
+\
+; -----------------------------------------------------------------------------
+\
+START
+\
+; Initializes the screen and draws a square centered at the graphic window
+\
+; whose side is 64 and whose fill color has R=G=0 and B=128.
+\
+; -----------------------------------------------------------------------------
+\
+            JSR     INIT                    ; INITIALIZE SCREEN
+\
+            MOVE.W  #SCRWIDTH/2,D1          ; X SCREEN CENTER
+\
+            MOVE.W  #SCRHEIGH/2,D2          ; Y SCREEN CENTER
+\
+            MOVE.W  #SQRSIDE,D3             ; SQUARE SIDE
+\
+            MOVE.B  #SQRBCHAN,D0            ; SQUARE BLUE CHANNEL
+\
+            JSR     DRSQUARE
+\
+            SIMHALT
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+INIT
+\
+; Initializes the output window to 640x480 windowed mode. The routine INIT
+\
+; in the exercises could have also been used.
+\
+; -----------------------------------------------------------------------------
+\
+            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1
+\
+            MOVE.B  #33,D0
+\
+            TRAP    #15                     ; SET RESOLUTION
+\
+            MOVE.L  #1,D1
+\
+            TRAP    #15                     ; SET WINDOWED MODE
+\
+            RTS
+\
+\
+; -----------------------------------------------------------------------------
+\
+DRSQUARE
+\
+; Draws a square with side D3.W and centered at D1.W, D2.W. The fill color is
+\
+; R=0, G=0 and B=D0.B and the border color is white.
+\
+; Input    - D0.B - Fill color blue channel value.
+\
+;            D1.W - Square center X coordinate.
+\
+;            D2.W - Square center Y coordinate.
+\
+;            D3.W - Square side.
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D1-D6,-(A7)             ; STORE REGISTERS
+\
+            MOVE.W  D1,D6                   ; STORE D1
+\
+            MOVE.B  D0,D1
+\
+            SWAP.W  D1                      ; PUT THE BLUE CHANNEL
+\
+            AND.L   #$00FF0000,D1           ; MASK IT
+\
+            MOVE.B  #81,D0
+\
+            TRAP    #15                     ; DEFINE FILL COLOR
+\
+            MOVE.L  #$00FFFFFF,D1           ; WHITE COLOR
+\
+            MOVE.B  #80,D0
+\
+            TRAP    #15                     ; DEFINE CONTOUR COLOR
+\
+            MOVE.W  D6,D1                   ; RESTORE D1
+\
+            MOVE.W  D3,D5                   ; COPY THE VALUE TO D5
+\
+            LSR.W   #1,D5                   ; COMPUTE HALF THE SIDE
+\
+            MOVE.W  D1,D3                   ; PREPARE XRIGHT
+\
+            MOVE.W  D2,D4                   ; PREPARE YRIGHT
+\
+            ADD.W   D5,D3                   ; COMPUTE XRIGHT
+\
+            ADD.W   D5,D4                   ; COMPUTE YRIGHT
+\
+            NEG.W   D5                      ; CONVERT TO NEGATIVE
+\
+            ADD.W   D5,D1                   ; COMPUTE XLEFT
+\
+            ADD.W   D5,D2                   ; COMPUTE YLEFT
+\
+            MOVE.B  #87,D0                  ; DRAW RECTANGLE TASK NUMBER
+\
+            TRAP    #15                     ; DRAW IT
+\
+            MOVEM.L (A7)+,D1-D6             ; RESTORE REGISTERS
+\
+            RTS
+\
+
+\
+            END     START
+\
 \
 \
 > Ejericico Graf 2\
 \
-            ORG     $1000\
-\
-SCRWIDTH    EQU     640\
-SCRHEIGH    EQU     480\
-SQUARESZ    EQU     32\
-\
-; -----------------------------------------------------------------------------\
-START\
-; Initializes the graphic output to windowed and SCRWIDTHxSCRHEIGH and installs\
-; TRAP #0. Then, it draws a grid, each square being SQUARESZxSQUARESZ pixels\
-; by drawing horizontal and vertical lines using the TRAP #0.\
-; -----------------------------------------------------------------------------\
-            MOVE.L  #1,D1\
-            MOVE.B  #33,D0\
-            TRAP    #15                     ; ENSURE WINDOWED MODE\
-            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1\
-            TRAP    #15                     ; SET RESOLUTION TO 640X480\
-            MOVE.L  #DRLINE,($80)           ; INSTALL TRAP #0\
-            MOVE.W  #SCRHEIGH/SQUARESZ-1,D1 ; DBRA COUNTER\
-            CLR.W   D0                      ; FIRST Y COORD FOR HOR LINES\
-.LOOPH      TRAP    #0                      ; DRAW THE HORIZ. LINE\
-            ADD.W   #SQUARESZ,D0            ; PREPARE COORDINATE FOR NEXT LINE\
-            DBRA.W  D1,.LOOPH               ; REPEAT FOR ALL HORIZ. LINES\
-            MOVE.W  #SCRWIDTH/SQUARESZ-1,D1 ; DBRA COUNTER\
-            MOVE.W  #$8000,D0               ; FIRST X COORD FOR VERT LINES\
-.LOOPV      TRAP    #0                      ; DRAW THE VERT. LINE\
-            ADD.W   #SQUARESZ,D0            ; PREPARE COORDINATE FOR NEXT LINE\
-            DBRA.W  D1,.LOOPV               ; REPEAT FOR ALL VERT. LINES\
-\
+            ORG     $1000
+\
+
+\
+SCRWIDTH    EQU     640
+\
+SCRHEIGH    EQU     480
+\
+SQUARESZ    EQU     32
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+START
+\
+; Initializes the graphic output to windowed and SCRWIDTHxSCRHEIGH and installs
+\
+; TRAP #0. Then, it draws a grid, each square being SQUARESZxSQUARESZ pixels
+\
+; by drawing horizontal and vertical lines using the TRAP #0.
+\
+; -----------------------------------------------------------------------------
+\
+            MOVE.L  #1,D1
+\
+            MOVE.B  #33,D0
+\
+            TRAP    #15                     ; ENSURE WINDOWED MODE
+\
+            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1
+\
+            TRAP    #15                     ; SET RESOLUTION TO 640X480
+\
+            MOVE.L  #DRLINE,($80)           ; INSTALL TRAP #0
+\
+            MOVE.W  #SCRHEIGH/SQUARESZ-1,D1 ; DBRA COUNTER
+\
+            CLR.W   D0                      ; FIRST Y COORD FOR HOR LINES
+\
+.LOOPH      TRAP    #0                      ; DRAW THE HORIZ. LINE
+\
+            ADD.W   #SQUARESZ,D0            ; PREPARE COORDINATE FOR NEXT LINE
+\
+            DBRA.W  D1,.LOOPH               ; REPEAT FOR ALL HORIZ. LINES
+\
+            MOVE.W  #SCRWIDTH/SQUARESZ-1,D1 ; DBRA COUNTER
+\
+            MOVE.W  #$8000,D0               ; FIRST X COORD FOR VERT LINES
+\
+.LOOPV      TRAP    #0                      ; DRAW THE VERT. LINE
+\
+            ADD.W   #SQUARESZ,D0            ; PREPARE COORDINATE FOR NEXT LINE
+\
+            DBRA.W  D1,.LOOPV               ; REPEAT FOR ALL VERT. LINES
+\
+
+\
             SIMHALT\
 \
-; -----------------------------------------------------------------------------\
-DRLINE\
-; Draws a white horizontal (from left to right of the drawing window) or verti-\
-; cal (from top to bottom of the drawing window). The drawing window width and\
-; height are assumed to be defined elsewhere as SCRWIDTH and SCRHEIGH respecti-\
-; vely.\
-; Input    - D0.W: Bit 15 = 0: Draw horizontal line.\
-;                  Bit 15 = 1: Draw vertical line.\
-;                  Bits 14-0 : Coordinate (vertical for horizontal lines and\
-;                              horizontal for vertical lines).\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D5,-(A7)             ; STORE REGISTERS\
-            MOVE.W  D0,D5                   ; STORE D0\
-            MOVE.B  #80,D0                  ; DEFINE PEN COLOR (TRAP CODE)\
-            MOVE.L  #$00FFFFFF,D1           ; PEN COLOR = WHITE\
-            TRAP    #15                     ; SET PEN COLOR\
-            MOVE.W  D5,D0                   ; RESTORE D0\
-            BCLR.L  #15,D0                  ; CHECK AND CLEAR BIT 15\
-            BEQ     .HORLINE                ; IF BIT15=0 DRAW HORIZONTAL\
-.VERTLINE   MOVE.W  D0,D1                   ; PROVIDED COORDINATE IS XINI\
-            MOVE.W  D0,D3                   ; PROVIDED COORDINATE IS XEND\
-            CLR.W   D2                      ; YINI=0\
-            MOVE.W  #SCRHEIGH,D4            ; YEND=SCRHEIGHT\
-            BRA     .DOIT                   ; GO TO DRAW THE LINE!\
-.HORLINE    MOVE.W  D0,D2                   ; PROVIDED COORDINATE IS YINI\
-            MOVE.W  D0,D4                   ; PROVIDED COORDINATE IS YEND\
-            CLR.W   D1                      ; XINI=0\
-            MOVE.W  #SCRWIDTH,D3            ; XEND=SCRWIDTH\
-.DOIT       MOVE.B  #84,D0                  ; DRAW LINE TRAP CODE\
-            TRAP    #15                     ; DRAW IT!\
-            MOVEM.L (A7)+,D0-D5             ; RESTORE REGISTERS\
-            RTE\
-\
+; -----------------------------------------------------------------------------
+\
+DRLINE
+\
+; Draws a white horizontal (from left to right of the drawing window) or verti-
+\
+; cal (from top to bottom of the drawing window). The drawing window width and
+\
+; height are assumed to be defined elsewhere as SCRWIDTH and SCRHEIGH respecti-
+\
+; vely.
+\
+; Input    - D0.W: Bit 15 = 0: Draw horizontal line.
+\
+;                  Bit 15 = 1: Draw vertical line.
+\
+;                  Bits 14-0 : Coordinate (vertical for horizontal lines and
+\
+;                              horizontal for vertical lines).
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D5,-(A7)             ; STORE REGISTERS
+\
+            MOVE.W  D0,D5                   ; STORE D0
+\
+            MOVE.B  #80,D0                  ; DEFINE PEN COLOR (TRAP CODE)
+\
+            MOVE.L  #$00FFFFFF,D1           ; PEN COLOR = WHITE
+\
+            TRAP    #15                     ; SET PEN COLOR
+\
+            MOVE.W  D5,D0                   ; RESTORE D0
+\
+            BCLR.L  #15,D0                  ; CHECK AND CLEAR BIT 15
+\
+            BEQ     .HORLINE                ; IF BIT15=0 DRAW HORIZONTAL
+\
+.VERTLINE   MOVE.W  D0,D1                   ; PROVIDED COORDINATE IS XINI
+\
+            MOVE.W  D0,D3                   ; PROVIDED COORDINATE IS XEND
+\
+            CLR.W   D2                      ; YINI=0
+\
+            MOVE.W  #SCRHEIGH,D4            ; YEND=SCRHEIGHT
+\
+            BRA     .DOIT                   ; GO TO DRAW THE LINE!
+\
+.HORLINE    MOVE.W  D0,D2                   ; PROVIDED COORDINATE IS YINI
+\
+            MOVE.W  D0,D4                   ; PROVIDED COORDINATE IS YEND
+\
+            CLR.W   D1                      ; XINI=0
+\
+            MOVE.W  #SCRWIDTH,D3            ; XEND=SCRWIDTH
+\
+.DOIT       MOVE.B  #84,D0                  ; DRAW LINE TRAP CODE
+\
+            TRAP    #15                     ; DRAW IT!
+\
+            MOVEM.L (A7)+,D0-D5             ; RESTORE REGISTERS
+\
+            RTE
+\
+
+\
             END     START\
 \
-; ==============================================================================\
-; LAB ASSIGNMENT 1 MODEL C SOLUTION\
-; AUTHOR      : ANTONI BURGUERA\
-; ==============================================================================\
-\
-            ORG     $1000\
-START\
-            ; SHOW HARDWARE WINDOW\
-            MOVE.B  #32,D0\
-            CLR.B   D1\
-            TRAP    #15\
-\
-            ; PUT LED MAPPING ADDRESS INTO A0\
-            ADDQ.B  #2,D1\
-            TRAP    #15\
-            MOVE.L  D1,A0\
-            \
-            ; INIT COUNTER\
-            MOVE.B  #1,D2\
-\
-            ; SHOW COUNTER\
-.LOOP       MOVE.B  D2,(A0)\
-\
-            ; WAIT HALF SECOND\
-            MOVE.B  #23,D0\
-            MOVE.L  #50,D1\
-            TRAP    #15\
-\
-            ; ROTATE COUNTER. NOTE THAT A REGISTER IS USED INSTEAD OF ROTATING\
-            ; (A0) DIRECTLY SINCE DOING SO WOULD IMPLICITLY *READ* A HARDWARE\
-            ; THAT IS WRITE-ONLY.\
-            ROL.B   #1,D2\
-\
-            ; LOOP\
-            BRA     .LOOP\
-\
-            SIMHALT\
-\
+; ==============================================================================
+\
+; LAB ASSIGNMENT 1 MODEL C SOLUTION
+\
+; AUTHOR      : ANTONI BURGUERA
+\
+; ==============================================================================
+\
+
+\
+            ORG     $1000
+\
+START
+\
+            ; SHOW HARDWARE WINDOW
+\
+            MOVE.B  #32,D0
+\
+            CLR.B   D1
+\
+            TRAP    #15
+\
+
+\
+            ; PUT LED MAPPING ADDRESS INTO A0
+\
+            ADDQ.B  #2,D1
+\
+            TRAP    #15
+\
+            MOVE.L  D1,A0
+\
+            
+\
+            ; INIT COUNTER
+\
+            MOVE.B  #1,D2
+\
+
+\
+            ; SHOW COUNTER
+\
+.LOOP       MOVE.B  D2,(A0)
+\
+
+\
+            ; WAIT HALF SECOND
+\
+            MOVE.B  #23,D0
+\
+            MOVE.L  #50,D1
+\
+            TRAP    #15
+\
+
+\
+            ; ROTATE COUNTER. NOTE THAT A REGISTER IS USED INSTEAD OF ROTATING
+\
+            ; (A0) DIRECTLY SINCE DOING SO WOULD IMPLICITLY *READ* A HARDWARE
+\
+            ; THAT IS WRITE-ONLY.
+\
+            ROL.B   #1,D2
+\
+
+\
+            ; LOOP
+\
+            BRA     .LOOP
+\
+
+\
+            SIMHALT
+\
+
+\
             END     START\
 \
 \
 > Ejercicio 2\
 \
-            ORG     $1000\
-\
-; -----------------------------------------------------------------------------\
-START\
-; Main program.\
-; -----------------------------------------------------------------------------\
-            MOVE.L  #DISPATCH,($80)         ; INSTALL DISPATCHER INTO TRAP #0\
-            MOVE.L  #640<<16+480,D1         ; SET RESOLUTION\
-            MOVE.B  #33,D0\
-            TRAP    #15\
-            MOVE.L  #1,D1                   ; SET WINDOWED MODE\
-            MOVE.B  #33,D0\
-            TRAP    #15\
-            JSR     SHOWHWIN\
-            LEA     .HWADDR,A0\
-            JSR     GTHWADDR\
-            MOVE.L  (.HWADDR+12), A0        ; PLACE TOGGLE BUTTON ADDR INTO A0\
-            MOVE.W  #100,D3                 ; SET RADIUS TO 100\
-            MOVE.W  #640/2,D1               ; SET CENTERED X\
-            MOVE.W  #480/2,D2               ; SET CENTERED Y\
-.LOOP       MOVE.L  #$0000FF00,D4           ; SET GREEN COLOR\
-            BTST.B  #0,(A0)\
-            BNE     .DOIT\
-            MOVE.L  #$000000FF,D4           ; SET GREEN COLOR\
-.DOIT       TRAP    #0\
-            BRA     .LOOP\
-.HWADDR     DS.L    4                       ; VAR. THIS IS NOT THE BEST PLACE\
-                                            ; TO DECLARE IT, BUT GOOD ENOUGH\
-                                            ; FOR THIS EXAMPLE.\
-\
-            SIMHALT\
-\
-; -----------------------------------------------------------------------------\
-DISPATCH\
-; Displays a white circle filled in red.\
-; Input    - D1.W: X Center\
-;            D2.W: Y Center\
-;            D3.W: Radius\
-;            D4.L: Color\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D6,-(A7)\
-            MOVE.W  D1,D6                   ; STORE D1\
-            MOVE.B  #81,D0                  ; SET FILL TO COLOR IN D4\
-            MOVE.L  D4,D1\
-            TRAP    #15\
-            MOVE.B  #80,D0                  ; SET PEN TO WHITE\
-            MOVE.L  #$00FFFFFF,D1\
-            TRAP    #15\
-            MOVE.W  D6,D1                   ; RESTORE D1\
-            MOVE.W  D3,D5                   ; COPY RADIUS\
-            MOVE.W  D1,D3                   ; PREPARE COORDINATES\
-            MOVE.W  D2,D4\
-            SUB.W   D5,D1\
-            SUB.W   D5,D2\
-            ADD.W   D5,D3\
-            ADD.W   D5,D4\
-            MOVE.B  #88,D0                  ; DRAW ELLIPSE/CIRCLE\
-            TRAP    #15\
-            MOVEM.L (A7)+,D0-D6\
-            RTE\
+            ORG     $1000
 \
-> Ejercicio 3\
-; -----------------------------------------------------------------------------\
-; CONSTANTS\
-; -----------------------------------------------------------------------------\
-SCRWIDTH    EQU     640                     ; DESIRED SCREEN WIDTH\
-SCRHEIGH    EQU     480                     ; DESIRED SCREEN HEIGHT\
-CIRCDIAM    EQU     64                      ; DIAMETER OF THE CIRCLE TO DRAW\
-CIRGCHAN    EQU     128                     ; CIRCLE GREEN CHANNEL VALUE\
-\
-            ORG     $1000\
-\
-; -----------------------------------------------------------------------------\
-START\
-; Initializes the screen and draws a circle centered at the graphic window\
-; whose diameter is 64 and whose fill color has R=B=0 and G=128.\
-; -----------------------------------------------------------------------------\
-            JSR     INIT                    ; INITIALIZE SCREEN\
-            MOVE.W  #SCRWIDTH/2,D1          ; X SCREEN CENTER\
-            MOVE.W  #SCRHEIGH/2,D2          ; Y SCREEN CENTER\
-            MOVE.W  #CIRCDIAM,D3            ; CIRCLE DIAMETER\
-            MOVE.B  #CIRGCHAN,D0            ; CIRCLE GREEN CHANNEL\
-            JSR     DRCIRCLE\
-            SIMHALT\
-\
-; -----------------------------------------------------------------------------\
-INIT\
-; Initializes the output window to 640x480 windowed mode. The routine INIT\
-; in the exercises could have also been used.\
-; -----------------------------------------------------------------------------\
-            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1\
-            MOVE.B  #33,D0\
-            TRAP    #15                     ; SET RESOLUTION\
-            MOVE.L  #1,D1\
-            TRAP    #15                     ; SET WINDOWED MODE\
-            RTS\
-\
-; -----------------------------------------------------------------------------\
-DRCIRCLE\
-; Draws a circle with diameter D3.W centered at D1.W, D2.W. The fill color is\
-; R=0, B=0 and G=D0.B and the border color is white.\
-; Input    - D0.B - Fill color green channel value.\
-;            D1.W - Circle center X coordinate.\
-;            D2.W - Circle center Y coordinate.\
-;            D3.W - Circle diameter.\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D1-D6,-(A7)             ; STORE REGISTERS\
-            MOVE.W  D1,D6                   ; STORE D1\
-            MOVE.B  D0,D1\
-            ROL.W   #8,D1                   ; PUT THE GREEN CHANNEL\
-            AND.L   #$0000FF00,D1           ; MASK IT\
-            MOVE.B  #81,D0\
-            TRAP    #15                     ; DEFINE FILL COLOR\
-            MOVE.L  #$00FFFFFF,D1           ; WHITE COLOR\
-            MOVE.B  #80,D0\
-            TRAP    #15                     ; DEFINE CONTOUR COLOR\
-            MOVE.W  D6,D1                   ; RESTORE D1\
-            MOVE.W  D3,D5                   ; COPY THE VALUE TO D5\
-            LSR.W   #1,D5                   ; COMPUTE HALF THE DIAMETER\
-            MOVE.W  D1,D3                   ; PREPARE XRIGHT\
-            MOVE.W  D2,D4                   ; PREPARE YRIGHT\
-            ADD.W   D5,D3                   ; COMPUTE XRIGHT\
-            ADD.W   D5,D4                   ; COMPUTE YRIGHT\
-            NEG.W   D5                      ; CONVERT TO NEGATIVE\
-            ADD.W   D5,D1                   ; COMPUTE XLEFT\
-            ADD.W   D5,D2                   ; COMPUTE YLEFT\
-            MOVE.B  #88,D0                  ; DRAW ELLIPSE TASK NUMBER\
-            TRAP    #15                     ; DRAW IT\
-            MOVEM.L (A7)+,D1-D6             ; RESTORE REGISTERS\
-            RTS\
-\
-            END     START\
-\
-\
-            ORG     $1000\
-\
-SCRWIDTH    EQU     640                     ; SCREEN WIDTH\
-SCRHEIGH    EQU     480                     ; SCREEN HEIGHT\
-SQUARESH    EQU     5                       ; NUMBER OF BITS TO SHIFT\
-SQUARESZ    EQU     1<<SQUARESH             ; SQUARE SIZE\
-\
-; -----------------------------------------------------------------------------\
-START\
-; Initializes the graphic output to windowed and SCRWIDTHxSCRHEIGH and installs\
-; TRAP #0. Then, it draws a grid, each square being SQUARESZxSQUARESZ pixels\
-; by drawing squares using DRSQUARE.\
-; -----------------------------------------------------------------------------\
-            MOVE.L  #1,D1\
-            MOVE.B  #33,D0\
-            TRAP    #15                     ; ENSURE WINDOWED MODE\
-            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1\
-            TRAP    #15                     ; SET RESOLUTION TO 640X480\
-            MOVE.L  #DRSQUARE,($80)         ; INSTALL TRAP #0\
-\
-            CLR.W   D0                      ; INITIAL COORDINATES\
-            MOVE.W  #SCRHEIGH/SQUARESZ-1,D2 ; ROW COUNTER\
-.LOOP       MOVE.W  #SCRWIDTH/SQUARESZ-1,D1 ; COLUMN COUNTER\
-            TRAP    #0\
-            ADDQ.W  #1,D0                   ; NEXT X\
-            DBRA.W  D1,.LOOP\
-            AND.W   #$FF00,D0               ; RESET X\
-            ADD.W   #$0100,D0               ; NEXT Y\
-            DBRA.W  D2,.LOOP\
-\
-            SIMHALT\
-\
-; -----------------------------------------------------------------------------\
-DRSQUARE\
-; Draws a square of SQUARESZxSQUARESZ pixels, top-left coordinates being\
-; X*SQUARESZ,Y*SQUARESZ\
-; Input    - D0.W: 8-MSB X, 8-LSB Y (top-left coordinate is X*SQUARESZ,\
-;            Y*SQUARESZ)\
-; Output   - None\
-; Modifies - Nothing\
-; -----------------------------------------------------------------------------\
-            MOVEM.L D0-D5,-(A7)             ; STORE REGISTERS\
-            MOVE.W  D0,D5                   ; COPY D0\
-            MOVE.B  #80,D0                  ; TRAP CODE TO DEFINE PEN COLOR\
-            MOVE.L  #$00FFFFFF,D1           ; COLOR=WHITE\
-            TRAP    #15                     ; SET PEN COLOR\
-            MOVE.W  D5,D1\
-            AND.W   #$00FF,D1               ; ISOLATE XINI (JUST MASK IT)\
-            LSL.W   #SQUARESH,D1            ; TIMES 32\
-            MOVE.W  D5,D2\
-            LSR.W   #8,D2                   ; PREPARA YINI (SHIFT RIGHT)\
-            LSL.W   #SQUARESH,D2            ; TIMES 32\
-            MOVE.W  D1,D3                   ; COPY XINI TO XEND\
-            MOVE.W  D2,D4                   ; COPY YINI TO YEND\
-            ADD.W   #SQUARESZ,D3            ; ADD SQUARESZ TO BUILD XEND\
-            ADD.W   #SQUARESZ,D4            ; ADD SQUARESZ TO BUILD YEND\
-            MOVE.B  #87,D0                  ; TRAP CODE TO DRAW RECTANGLE\
-            TRAP    #15                     ; DRAW IT\
-            MOVEM.L (A7)+,D0-D5             ; RESTORE REGISTERS\
-            RTE\
-\
-            END     START\
-\
+
+\
+; -----------------------------------------------------------------------------
+\
+START
+\
+; Main program.
+\
+; -----------------------------------------------------------------------------
+\
+            MOVE.L  #DISPATCH,($80)         ; INSTALL DISPATCHER INTO TRAP #0
+\
+            MOVE.L  #640<<16+480,D1         ; SET RESOLUTION
+\
+            MOVE.B  #33,D0
+\
+            TRAP    #15
+\
+            MOVE.L  #1,D1                   ; SET WINDOWED MODE
+\
+            MOVE.B  #33,D0
+\
+            TRAP    #15
+\
+            JSR     SHOWHWIN
+\
+            LEA     .HWADDR,A0
+\
+            JSR     GTHWADDR
+\
+            MOVE.L  (.HWADDR+12), A0        ; PLACE TOGGLE BUTTON ADDR INTO A0
+\
+            MOVE.W  #100,D3                 ; SET RADIUS TO 100
+\
+            MOVE.W  #640/2,D1               ; SET CENTERED X
+\
+            MOVE.W  #480/2,D2               ; SET CENTERED Y
+\
+.LOOP       MOVE.L  #$0000FF00,D4           ; SET GREEN COLOR
+\
+            BTST.B  #0,(A0)
+\
+            BNE     .DOIT
+\
+            MOVE.L  #$000000FF,D4           ; SET GREEN COLOR
+\
+.DOIT       TRAP    #0
+\
+            BRA     .LOOP
+\
+.HWADDR     DS.L    4                       ; VAR. THIS IS NOT THE BEST PLACE
+\
+                                            ; TO DECLARE IT, BUT GOOD ENOUGH
+\
+                                            ; FOR THIS EXAMPLE.
+\
+
+\
+            SIMHALT
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+DISPATCH
+\
+; Displays a white circle filled in red.
+\
+; Input    - D1.W: X Center
+\
+;            D2.W: Y Center
+\
+;            D3.W: Radius
+\
+;            D4.L: Color
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D6,-(A7)
+\
+            MOVE.W  D1,D6                   ; STORE D1
+\
+            MOVE.B  #81,D0                  ; SET FILL TO COLOR IN D4
+\
+            MOVE.L  D4,D1
+\
+            TRAP    #15
+\
+            MOVE.B  #80,D0                  ; SET PEN TO WHITE
+\
+            MOVE.L  #$00FFFFFF,D1
+\
+            TRAP    #15
+\
+            MOVE.W  D6,D1                   ; RESTORE D1
+\
+            MOVE.W  D3,D5                   ; COPY RADIUS
+\
+            MOVE.W  D1,D3                   ; PREPARE COORDINATES
+\
+            MOVE.W  D2,D4
+\
+            SUB.W   D5,D1
+\
+            SUB.W   D5,D2
+\
+            ADD.W   D5,D3
+\
+            ADD.W   D5,D4
+\
+            MOVE.B  #88,D0                  ; DRAW ELLIPSE/CIRCLE
+\
+            TRAP    #15
+\
+            MOVEM.L (A7)+,D0-D6
+\
+            RTE
+\
+\
+> Ejercicio 3
+\
+; -----------------------------------------------------------------------------
+\
+; CONSTANTS
+\
+; -----------------------------------------------------------------------------
+\
+SCRWIDTH    EQU     640                     ; DESIRED SCREEN WIDTH
+\
+SCRHEIGH    EQU     480                     ; DESIRED SCREEN HEIGHT
+\
+CIRCDIAM    EQU     64                      ; DIAMETER OF THE CIRCLE TO DRAW
+\
+CIRGCHAN    EQU     128                     ; CIRCLE GREEN CHANNEL VALUE
+\
+
+\
+            ORG     $1000
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+START
+\
+; Initializes the screen and draws a circle centered at the graphic window
+\
+; whose diameter is 64 and whose fill color has R=B=0 and G=128.
+\
+; -----------------------------------------------------------------------------
+\
+            JSR     INIT                    ; INITIALIZE SCREEN
+\
+            MOVE.W  #SCRWIDTH/2,D1          ; X SCREEN CENTER
+\
+            MOVE.W  #SCRHEIGH/2,D2          ; Y SCREEN CENTER
+\
+            MOVE.W  #CIRCDIAM,D3            ; CIRCLE DIAMETER
+\
+            MOVE.B  #CIRGCHAN,D0            ; CIRCLE GREEN CHANNEL
+\
+            JSR     DRCIRCLE
+\
+            SIMHALT
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+INIT
+\
+; Initializes the output window to 640x480 windowed mode. The routine INIT
+\
+; in the exercises could have also been used.
+\
+; -----------------------------------------------------------------------------
+\
+            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1
+\
+            MOVE.B  #33,D0
+\
+            TRAP    #15                     ; SET RESOLUTION
+\
+            MOVE.L  #1,D1
+\
+            TRAP    #15                     ; SET WINDOWED MODE
+\
+            RTS
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+DRCIRCLE
+\
+; Draws a circle with diameter D3.W centered at D1.W, D2.W. The fill color is
+\
+; R=0, B=0 and G=D0.B and the border color is white.
+\
+; Input    - D0.B - Fill color green channel value.
+\
+;            D1.W - Circle center X coordinate.
+\
+;            D2.W - Circle center Y coordinate.
+\
+;            D3.W - Circle diameter.
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D1-D6,-(A7)             ; STORE REGISTERS
+\
+            MOVE.W  D1,D6                   ; STORE D1
+\
+            MOVE.B  D0,D1
+\
+            ROL.W   #8,D1                   ; PUT THE GREEN CHANNEL
+\
+            AND.L   #$0000FF00,D1           ; MASK IT
+\
+            MOVE.B  #81,D0
+\
+            TRAP    #15                     ; DEFINE FILL COLOR
+\
+            MOVE.L  #$00FFFFFF,D1           ; WHITE COLOR
+\
+            MOVE.B  #80,D0
+\
+            TRAP    #15                     ; DEFINE CONTOUR COLOR
+\
+            MOVE.W  D6,D1                   ; RESTORE D1
+\
+            MOVE.W  D3,D5                   ; COPY THE VALUE TO D5
+\
+            LSR.W   #1,D5                   ; COMPUTE HALF THE DIAMETER
+\
+            MOVE.W  D1,D3                   ; PREPARE XRIGHT
+\
+            MOVE.W  D2,D4                   ; PREPARE YRIGHT
+\
+            ADD.W   D5,D3                   ; COMPUTE XRIGHT
+\
+            ADD.W   D5,D4                   ; COMPUTE YRIGHT
+\
+            NEG.W   D5                      ; CONVERT TO NEGATIVE
+\
+            ADD.W   D5,D1                   ; COMPUTE XLEFT
+\
+            ADD.W   D5,D2                   ; COMPUTE YLEFT
+\
+            MOVE.B  #88,D0                  ; DRAW ELLIPSE TASK NUMBER
+\
+            TRAP    #15                     ; DRAW IT
+\
+            MOVEM.L (A7)+,D1-D6             ; RESTORE REGISTERS
+\
+            RTS
+\
+
+\
+            END     START
+\
+
+\
+
+\
+            ORG     $1000
+\
+
+\
+SCRWIDTH    EQU     640                     ; SCREEN WIDTH
+\
+SCRHEIGH    EQU     480                     ; SCREEN HEIGHT
+\
+SQUARESH    EQU     5                       ; NUMBER OF BITS TO SHIFT
+\
+SQUARESZ    EQU     1<<SQUARESH             ; SQUARE SIZE
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+START
+\
+; Initializes the graphic output to windowed and SCRWIDTHxSCRHEIGH and installs
+\
+; TRAP #0. Then, it draws a grid, each square being SQUARESZxSQUARESZ pixels
+\
+; by drawing squares using DRSQUARE.
+\
+; -----------------------------------------------------------------------------
+\
+            MOVE.L  #1,D1
+\
+            MOVE.B  #33,D0
+\
+            TRAP    #15                     ; ENSURE WINDOWED MODE
+\
+            MOVE.L  #SCRWIDTH<<16|SCRHEIGH,D1
+\
+            TRAP    #15                     ; SET RESOLUTION TO 640X480
+\
+            MOVE.L  #DRSQUARE,($80)         ; INSTALL TRAP #0
+\
+
+\
+            CLR.W   D0                      ; INITIAL COORDINATES
+\
+            MOVE.W  #SCRHEIGH/SQUARESZ-1,D2 ; ROW COUNTER
+\
+.LOOP       MOVE.W  #SCRWIDTH/SQUARESZ-1,D1 ; COLUMN COUNTER
+\
+            TRAP    #0
+\
+            ADDQ.W  #1,D0                   ; NEXT X
+\
+            DBRA.W  D1,.LOOP
+\
+            AND.W   #$FF00,D0               ; RESET X
+\
+            ADD.W   #$0100,D0               ; NEXT Y
+\
+            DBRA.W  D2,.LOOP
+\
+
+\
+            SIMHALT
+\
+
+\
+; -----------------------------------------------------------------------------
+\
+DRSQUARE
+\
+; Draws a square of SQUARESZxSQUARESZ pixels, top-left coordinates being
+\
+; X*SQUARESZ,Y*SQUARESZ
+\
+; Input    - D0.W: 8-MSB X, 8-LSB Y (top-left coordinate is X*SQUARESZ,
+\
+;            Y*SQUARESZ)
+\
+; Output   - None
+\
+; Modifies - Nothing
+\
+; -----------------------------------------------------------------------------
+\
+            MOVEM.L D0-D5,-(A7)             ; STORE REGISTERS
+\
+            MOVE.W  D0,D5                   ; COPY D0
+\
+            MOVE.B  #80,D0                  ; TRAP CODE TO DEFINE PEN COLOR
+\
+            MOVE.L  #$00FFFFFF,D1           ; COLOR=WHITE
+\
+            TRAP    #15                     ; SET PEN COLOR
+\
+            MOVE.W  D5,D1
+\
+            AND.W   #$00FF,D1               ; ISOLATE XINI (JUST MASK IT)
+\
+            LSL.W   #SQUARESH,D1            ; TIMES 32
+\
+            MOVE.W  D5,D2
+\
+            LSR.W   #8,D2                   ; PREPARA YINI (SHIFT RIGHT)
+\
+            LSL.W   #SQUARESH,D2            ; TIMES 32
+\
+            MOVE.W  D1,D3                   ; COPY XINI TO XEND
+\
+            MOVE.W  D2,D4                   ; COPY YINI TO YEND
+\
+            ADD.W   #SQUARESZ,D3            ; ADD SQUARESZ TO BUILD XEND
+\
+            ADD.W   #SQUARESZ,D4            ; ADD SQUARESZ TO BUILD YEND
+\
+            MOVE.B  #87,D0                  ; TRAP CODE TO DRAW RECTANGLE
+\
+            TRAP    #15                     ; DRAW IT
+\
+            MOVEM.L (A7)+,D0-D5             ; RESTORE REGISTERS
+\
+            RTE
+\
+
+\
+            END     START
+\
+
+\
 > Ejericio 4\
 \
-; ==============================================================================\
-; LAB ASSIGNMENT 1 MODEL D SOLUTION\
-; AUTHOR      : ANTONI BURGUERA\
-; ==============================================================================\
-\
-            ORG     $1000\
-START\
-            ; SHOW HARDWARE WINDOW\
-            MOVE.B  #32,D0\
-            CLR.B   D1\
-            TRAP    #15\
-\
-            ; PUT RIGHTMOST 7-SEGMENT MAPPING ADDRESS INTO A0\
-            ADDQ.B  #1,D1\
-            TRAP    #15\
-            MOVE.L  D1,A0\
-            LEA     14(A0),A0\
-\
-            ; INIT COUNTER\
-.RESTART    MOVE.B  #%00100100,D2\
-\
-            ; DISPLAY COUNTER\
-.LOOP       MOVE.B  D2,(A0)\
-\
-            ; WAIT HALF SECOND\
-            MOVE.B  #23,D0\
-            MOVE.L  #50,D1\
-            TRAP    #15\
-\
-            ; UPDATE COUNTER\
-            LSR.B   #1,D2\
-\
-            ; IF LAST ITERATION, RESTART\
-            BCS     .RESTART\
-\
-            ; LOOP\
-            BRA     .LOOP\
-\
-            SIMHALT\
-\
-\
+; ==============================================================================
+\
+; LAB ASSIGNMENT 1 MODEL D SOLUTION
+\
+; AUTHOR      : ANTONI BURGUERA
+\
+; ==============================================================================
+\
+
+\
+            ORG     $1000
+\
+START
+\
+            ; SHOW HARDWARE WINDOW
+\
+            MOVE.B  #32,D0
+\
+            CLR.B   D1
+\
+            TRAP    #15
+\
+
+\
+            ; PUT RIGHTMOST 7-SEGMENT MAPPING ADDRESS INTO A0
+\
+            ADDQ.B  #1,D1
+\
+            TRAP    #15
+\
+            MOVE.L  D1,A0
+\
+            LEA     14(A0),A0
+\
+
+\
+            ; INIT COUNTER
+\
+.RESTART    MOVE.B  #%00100100,D2
+\
+
+\
+            ; DISPLAY COUNTER
+\
+.LOOP       MOVE.B  D2,(A0)
+\
+
+\
+            ; WAIT HALF SECOND
+\
+            MOVE.B  #23,D0
+\
+            MOVE.L  #50,D1
+\
+            TRAP    #15
+\
+
+\
+            ; UPDATE COUNTER
+\
+            LSR.B   #1,D2
+\
+
+\
+            ; IF LAST ITERATION, RESTART
+\
+            BCS     .RESTART
+\
+
+\
+            ; LOOP
+\
+            BRA     .LOOP
+\
+
+\
+            SIMHALT
+\
+
+\
+
+\
             END     START\
 \
 > Ejericio 5\
-\
-; ==============================================================================\
-; LAB ASSIGNMENT 1 MODEL E SOLUTION\
-; AUTHOR      : ANTONI BURGUERA\
-; ==============================================================================\
-\
-            ORG     $1000\
-START\
-            ; SHOW HARDWARE WINDOW\
-            MOVE.B  #32,D0\
-            CLR.B   D1\
-            TRAP    #15\
-\
-            ; PUT LED MAPPING ADDRESS INTO A0\
-            ADDQ.B  #2,D1\
-            TRAP    #15\
-            MOVE.L  D1,A0\
-\
-            ; GET DATA POINTER\
-.RESTART    LEA     .DATA,A1\
-\
-            ; GET VALUE\
-.LOOP       MOVE.B  (A1)+,D0\
-\
-            ; IF ZERO (TERMINATOR), RESTART\
-            BEQ     .RESTART\
-\
-            ; SHOW VALUE\
-.CONT       MOVE.B  D0,(A0)\
-\
-            ; WAIT HALF SECOND\
-            MOVE.B  #23,D0\
-            MOVE.L  #50,D1\
-            TRAP    #15\
-\
-            ; LOOP\
-            BRA     .LOOP\
-\
-            SIMHALT\
-\
-            ; VALUES TO SHOW\
-.DATA       DC.B    %10000001,%01000010,%00100100,%00011000\
-            DC.B    %00100100,%01000010,0\
-            DS.W    0\
-\
-\
-            END     START\
+
+\
+; ==============================================================================
+\
+; LAB ASSIGNMENT 1 MODEL E SOLUTION
+\
+; AUTHOR      : ANTONI BURGUERA
+\
+; ==============================================================================
+\
+
+\
+            ORG     $1000
+\
+START
+\
+            ; SHOW HARDWARE WINDOW
+\
+            MOVE.B  #32,D0
+\
+            CLR.B   D1
+\
+            TRAP    #15
+\
+
+\
+            ; PUT LED MAPPING ADDRESS INTO A0
+\
+            ADDQ.B  #2,D1
+\
+            TRAP    #15
+\
+            MOVE.L  D1,A0
+\
+
+\
+            ; GET DATA POINTER
+\
+.RESTART    LEA     .DATA,A1
+\
+
+\
+            ; GET VALUE
+\
+.LOOP       MOVE.B  (A1)+,D0
+\
+
+\
+            ; IF ZERO (TERMINATOR), RESTART
+\
+            BEQ     .RESTART
+\
+
+\
+            ; SHOW VALUE
+\
+.CONT       MOVE.B  D0,(A0)
+\
+
+\
+            ; WAIT HALF SECOND
+\
+            MOVE.B  #23,D0
+\
+            MOVE.L  #50,D1
+\
+            TRAP    #15
+\
+
+\
+            ; LOOP
+\
+            BRA     .LOOP
+\
+
+\
+            SIMHALT
+\
+
+\
+            ; VALUES TO SHOW
+\
+.DATA       DC.B    %10000001,%01000010,%00100100,%00011000
+\
+            DC.B    %00100100,%01000010,0
+\
+            DS.W    0
+\
+
+\
+
+\
+            END     START
+\
 \
 \
 \
